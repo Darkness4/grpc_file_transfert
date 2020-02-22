@@ -1,0 +1,16 @@
+name: grpc_file_transfer
+description: A sample command-line application.
+# version: 1.0.0
+# homepage: https://www.example.com
+
+environment:
+  sdk: '>=2.7.0 <3.0.0'
+
+dependencies:
+  grpc: ^2.1.3
+  protobuf: ^1.0.1
+  path: ^1.6.4
+
+dev_dependencies:
+  pedantic: ^1.9.0
+  test: ^1.12.0

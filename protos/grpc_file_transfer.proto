@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.example.grpc_file_transfer";
+option java_outer_classname = "GrpcFileTransfer";
+option objc_class_prefix = "GFT";
+
+package grpcfiletransfert;
+
+service GrpcFileTransfer {
+  rpc Upload(stream PutRequest) returns (UploadStatus) {}
+}
+
+message Chunk {
+  bytes data = 1;
+}
+
+message Metadata{
+  string auth = 1;
+  string file_name = 2;
+  int32 file_size = 3;
+}
+
+message PutRequest {
+  oneof value {
+    Metadata metadata = 1;
+    Chunk chunk = 2;
+  }
+}
+
+enum UploadStatusCode {
+  Unknown = 0;
+  Ok = 1;
+  Failed = 2;
+}
+
+message UploadStatus {
+  string Message = 1;
+  UploadStatusCode Code = 2;
+}

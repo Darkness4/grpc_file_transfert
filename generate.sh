@@ -1,0 +1,1 @@
+protoc -I protos/ protos/grpc_file_transfer.proto --dart_out=grpc:lib/src/generated
