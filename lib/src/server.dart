@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:grpc/grpc.dart' as grpc;
 
 import 'common.dart';
-import 'generated/grpc_file_transfer.pb.dart';
 import 'generated/grpc_file_transfer.pbgrpc.dart';
 
 class GrpcFileTransferService extends GrpcFileTransferServiceBase {
@@ -18,13 +17,14 @@ class GrpcFileTransferService extends GrpcFileTransferServiceBase {
     final StreamController<Chunk> streamController = StreamController<Chunk>();
     final broadcast = request.asBroadcastStream();
     final first = await broadcast.first;
+    final UploadStatus uploadStatus = UploadStatus();
 
     // Check for packet metadata
     Metadata metadata;
     if (first.hasMetadata()) {
       metadata = first.metadata;
     } else {
-      return UploadStatus()
+      return uploadStatus
         ..code = UploadStatusCode.Failed
         ..message = "No metadata found.";
     }
@@ -32,17 +32,24 @@ class GrpcFileTransferService extends GrpcFileTransferServiceBase {
     // Check metadata validity
     if (metadata.fileSize > 5e9) {
       print("File ${metadata.fileName} is too big. Connection refused.");
-      return UploadStatus()
+      return uploadStatus
         ..code = UploadStatusCode.Failed
         ..message = "File is too big: ${metadata.fileSize} > 5MB";
     }
 
     // Start uploading
-    final response = fileManager.upload(
+    final response = fileManager
+        .upload(
       streamController.stream,
       metadata.fileName,
       metadata.fileSize,
-    );
+    )
+        .timeout(const Duration(seconds: 5), onTimeout: () async {
+      await streamController.close();
+      return uploadStatus
+        ..code = UploadStatusCode.Failed
+        ..message = "Connection timed out.";
+    });
 
     final chunks = broadcast
         .where((data) => data.hasChunk())
@@ -57,7 +64,7 @@ class GrpcFileTransferService extends GrpcFileTransferServiceBase {
       await streamController.close();
       await response;
       await fileManager.remove(metadata.fileName);
-      return UploadStatus()
+      return uploadStatus
         ..code = UploadStatusCode.Failed
         ..message = "Format refused. Must be PNG or JPEG.";
     }
@@ -65,8 +72,9 @@ class GrpcFileTransferService extends GrpcFileTransferServiceBase {
     // Uploading
     streamController.add(firstChunk);
     await chunks.forEach(streamController.add);
-    await streamController.close();
 
+    // Closing
+    await streamController.close();
     print("StatusCode: ${(await response).code}");
     print("Message: ${(await response).message}");
     return response;

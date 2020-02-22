@@ -41,11 +41,14 @@ class FileManagerImpl implements FileManager {
         print("${(size / fileSize * 100).round()}%");
         if (size > fileSize) {
           throw Exception(
-              "File received does not correspond to received metadata.");
+              "File received does not correspond to received metadata: File : $size > Metadata : $fileSize");
         }
+
         sink.add(chunk.data);
       });
     } catch (e) {
+      await sink.close();
+      await remove(fileName);
       return UploadStatus()
         ..message = "Failed unexpectedly while reading chunks from stream. $e"
         ..code = UploadStatusCode.Failed;
@@ -59,8 +62,11 @@ class FileManagerImpl implements FileManager {
 
     // Server-Sided file size check.
     if (localFileSize > 5e9) {
-      await remove(path);
+      await remove(fileName);
       print("Deleted ${path}. File is too big.");
+    } else if (localFileSize != fileSize) {
+      print("Deleted ${path}. File received does not correspond to received"
+          " metadata. File : $localFileSize != Metadata : $fileSize");
     }
     return UploadStatus()
       ..message = "Upload received with success."

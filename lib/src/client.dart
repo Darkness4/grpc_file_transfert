@@ -25,7 +25,7 @@ class Client {
 
     // DO
     try {
-      final file = File("input.jpg");
+      final file = File("input.png");
       final datas = file.openRead();
       await service.upload(
         datas,
@@ -63,6 +63,8 @@ class GrpcFileTransferClientService {
     // Then, send all the chunks
     final chunks =
         datas.map((data) => PutRequest()..chunk = (Chunk()..data = data));
+    print("KILL ME");
+
     await chunks.forEach(streamController.add);
     await streamController.close();
     print("StatusCode: ${(await response).code}");
