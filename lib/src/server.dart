@@ -100,7 +100,11 @@ class Server {
   Future<void> main(List<String> args) async {
     final FileManager fileManager = FileManagerImpl();
     final server = grpc.Server([GrpcFileTransferService(fileManager)]);
-    await server.serve(address: '127.0.0.1', port: 8080);
+    final List<int> certificate = File("server.crt").readAsBytesSync();
+    final List<int> key = File("server.key").readAsBytesSync();
+    final creds =
+        grpc.ServerTlsCredentials(certificate: certificate, privateKey: key);
+    await server.serve(address: 'localhost', port: 8443, security: creds);
     print('Server listening on port ${server.port}...');
 
     ProcessSignal.sigint.watch().listen((ProcessSignal signal) async {

@@ -12,10 +12,16 @@ class Client {
 
   Future<void> main(List<String> args) async {
     // Setup
+
+    final List<int> trustedRoot = File('ca.crt').readAsBytesSync();
+    final ChannelCredentials creds = ChannelCredentials.secure(
+      certificates: trustedRoot,
+      authority: 'localhost',
+    );
     channel = ClientChannel(
-      '127.0.0.1',
-      port: 8080,
-      options: const ChannelOptions(credentials: ChannelCredentials.insecure()),
+      'localhost',
+      port: 8443,
+      options: ChannelOptions(credentials: creds),
     );
     stub = GrpcFileTransferClient(
       channel,
@@ -63,7 +69,6 @@ class GrpcFileTransferClientService {
     // Then, send all the chunks
     final chunks =
         datas.map((data) => PutRequest()..chunk = (Chunk()..data = data));
-    print("KILL ME");
 
     await chunks.forEach(streamController.add);
     await streamController.close();
